@@ -26,12 +26,19 @@ try {
     }
   }
   $savedEnvironment['PATH'] = $env:PATH
-  $env:PATH = (Join-Path $env:SystemRoot 'System32') + ';' + $env:SystemRoot
+  $env:PATH = (Join-Path $env:SystemRoot 'System32')
+  $resolvedNode = @(Get-Command node.exe -CommandType Application -All -ErrorAction SilentlyContinue | ForEach-Object { [ordered]@{name=$_.Name;path=$_.Path;source=$_.Source;commandType=$_.CommandType.ToString()} })
+  $resolvedPython = @(Get-Command python.exe, python3.exe, py.exe -CommandType Application -All -ErrorAction SilentlyContinue | ForEach-Object { [ordered]@{name=$_.Name;path=$_.Path;source=$_.Source;commandType=$_.CommandType.ToString()} })
+  $spooler = Get-Service -Name Spooler -ErrorAction SilentlyContinue
   $isolation = [ordered]@{
     pathContainsOnlyWindowsDirectories = $true
     path = $env:PATH
-    canResolveNode = [bool](Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue)
-    canResolvePython = [bool](Get-Command python.exe, python3.exe, py.exe -CommandType Application -ErrorAction SilentlyContinue)
+    canResolveNode = ($resolvedNode.Count -gt 0)
+    canResolvePython = ($resolvedPython.Count -gt 0)
+    resolvedNodeExecutables = $resolvedNode
+    resolvedPythonExecutables = $resolvedPython
+    probingMethod = 'PowerShell Get-Command -CommandType Application -All'
+    printingSpooler = $(if ($spooler) { [ordered]@{status=$spooler.Status.ToString();startType=$spooler.StartType.ToString()} } else { $null })
     nodeEnvironmentAbsent = -not [bool](Get-ChildItem Env: | Where-Object Name -Match '^NODE_')
     pythonEnvironmentAbsent = -not [bool](Get-ChildItem Env: | Where-Object Name -Match '^PYTHON')
     electronEnvironmentAbsent = -not [bool](Get-ChildItem Env: | Where-Object Name -Match '^ELECTRON_')
