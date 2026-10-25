@@ -1,0 +1,61 @@
+name: Independent Windows installation check
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to test
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download only distributable applications
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:RELEASE_VERSION -notmatch '^v\d+\.\d+\.\d+$') { throw 'Invalid release version' }
+          $version = $env:RELEASE_VERSION.Substring(1)
+          $directory = Join-Path $env:RUNNER_TEMP 'Xiguang download with spaces'
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          $base = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_VERSION"
+          Invoke-WebRequest "$base/Xiguang-$version-x64-Setup.exe" -OutFile (Join-Path $directory 'Setup.exe')
+          Invoke-WebRequest "$base/Xiguang-$version-x64-Portable.exe" -OutFile (Join-Path $directory 'Portable.exe')
+          Invoke-WebRequest "$base/SHA256SUMS.txt" -OutFile (Join-Path $directory 'SHA256SUMS.txt')
+          $expected = Get-Content -LiteralPath (Join-Path $directory 'SHA256SUMS.txt')
+          foreach ($pair in @(@('Setup.exe',"Xiguang-$version-x64-Setup.exe"),@('Portable.exe',"Xiguang-$version-x64-Portable.exe"))) {
+            $hash = (Get-FileHash -LiteralPath (Join-Path $directory $pair[0]) -Algorithm SHA256).Hash.ToLowerInvariant()
+            if (-not ($expected | Where-Object { $_ -eq "$hash  $($pair[1])" })) { throw 'Checksum mismatch' }
+          }
+      - name: Verify portable and installed application without developer tools
+        shell: pwsh
+        run: |
+          $directory = Join-Path $env:RUNNER_TEMP 'Xiguang download with spaces'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'independent-results'
+          & ./verification/verify-portable.ps1 -ExecutablePath (Join-Path $directory 'Portable.exe') -OutputDirectory (Join-Path $output 'portable')
+          if ($LASTEXITCODE -ne 0) { throw 'Portable verification failed' }
+          $installer = Start-Process -FilePath (Join-Path $directory 'Setup.exe') -ArgumentList '/S' -PassThru
+          if (-not $installer.WaitForExit(150000)) { throw 'Installation timeout' }
+          if ($installer.ExitCode -ne 0) { throw 'Installation failed' }
+          $candidates = @(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'Programs') -Filter Xiguang.exe -Recurse -ErrorAction SilentlyContinue)
+          if ($candidates.Count -ne 1) { throw 'Installed executable was not found uniquely' }
+          & ./verification/verify-portable.ps1 -ExecutablePath $candidates[0].FullName -OutputDirectory (Join-Path $output 'installed')
+          if ($LASTEXITCODE -ne 0) { throw 'Installed verification failed' }
+          $shortcuts = @(Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Desktop')) -Filter '*.lnk' | Where-Object BaseName -eq '析光')
+          if ($shortcuts.Count -lt 1) { throw 'Desktop shortcut was not created' }
+          @{freshHostedWindowsRunner=$true;portablePass=$true;installedPass=$true;desktopShortcut=$true;developerToolsHidden=$true;minimalWindowsImage=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'summary.json') -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: independent-windows-verification
+          path: independent-results
+          retention-days: 3
+          if-no-files-found: warn
