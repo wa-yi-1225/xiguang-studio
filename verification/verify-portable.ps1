@@ -77,3 +77,4 @@ try {
   foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process') }
   if ($process) { $process.Dispose() }
 }
+exit 0
