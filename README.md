@@ -8,10 +8,14 @@ Windows 用户下载应用后即可使用，**无需安装 Python、Node.js、Ex
 
 前往 [Releases 下载页](https://github.com/wa-yi-1225/xiguang-studio/releases/latest)，在 Assets 中选择：
 
+[直接下载安装版](https://github.com/wa-yi-1225/xiguang-studio/releases/download/v0.1.0/Xiguang-0.1.0-x64-Setup.exe) · [直接下载免安装版](https://github.com/wa-yi-1225/xiguang-studio/releases/download/v0.1.0/Xiguang-0.1.0-x64-Portable.exe)
+
 - **`Xiguang-0.1.0-x64-Setup.exe`**：完整离线安装包。安装后使用桌面或开始菜单中的「析光」图标。
 - **`Xiguang-0.1.0-x64-Portable.exe`**：免安装版本，双击运行。
 
-支持 Windows 10 / 11 x64。本版本没有购买代码签名证书，Windows 可能显示未知发布者。可用 Releases 的 SHA256SUMS.txt 校验下载文件；不会要求关闭系统安全功能。Source code 压缩包是给开发者的，普通用户请下载安装包。
+支持 Windows 10 / 11 x64。本版本没有购买代码签名证书，Windows 可能显示未知发布者。可用 Releases 的 SHA256SUMS.txt 校验下载文件；不会要求关闭系统安全功能。GitHub 自动提供的 Source code 压缩包只包含公开说明，不是可运行软件，请下载安装包或免安装版。
+
+2026-10-26 已通过[独立 Windows 下载与安装验收](https://github.com/wa-yi-1225/xiguang-studio/actions/runs/40260818602)：安装版、便携版、桌面快捷方式、数据分析与 PDF 导出均成功，测试进程找不到系统 Node/Python。另有 80 项单元与集成测试通过。测试机为 GitHub 标准 Windows runner，屏蔽其预装开发工具，并非最小 Windows 镜像；详细范围见 Release 的 quality_report.txt。
 
 ## 可以做什么
 
