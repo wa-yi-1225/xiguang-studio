@@ -55,6 +55,9 @@ try {
   }
   $process.Refresh()
   $result = if (Test-Path -LiteralPath $smokeOutput) { Get-Content -LiteralPath $smokeOutput -Raw -Encoding UTF8 | ConvertFrom-Json } else { [PSCustomObject]@{ ok = $false; error = '独立程序没有生成自检结果。' } }
+  if ($result.ok -and $result.selfTest.fullReportExport.path -and (Test-Path -LiteralPath $result.selfTest.fullReportExport.path)) {
+    Copy-Item -LiteralPath $result.selfTest.fullReportExport.path -Destination (Join-Path $outputFolder 'sample-report.pdf')
+  }
   $verification = [ordered]@{
     ok = ($process.ExitCode -eq 0 -and -not $timedOut -and [bool]$result.ok -and -not $isolation.canResolveNode -and -not $isolation.canResolvePython)
     executable = $executable
